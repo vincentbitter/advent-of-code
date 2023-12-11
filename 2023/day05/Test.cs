@@ -58,14 +58,7 @@ public class Test
         for (var i = 0; i < seedRangesInput.Length / 2; i++) {
             seedRanges.Add(new Range(seedRangesInput[i * 2], seedRangesInput[i * 2] + seedRangesInput[i * 2 + 1] - 1));
         }
-        // var results = new List<long>();
-        // foreach (var seed in seeds) {
-        //     var result = seed;
-        //     foreach (var group in groups) {
-        //         result = group.Convert(result);
-        //     }
-        //     results.Add(result);
-        // }
+        
         groups.Reverse();
 
         long location = 0;

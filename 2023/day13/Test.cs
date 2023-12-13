@@ -17,12 +17,8 @@ public class Test
         var horizontalCount = 0;
         foreach(var map in inputs) {
             var rotatedMap = RotateRight(map);
-            var h = MirroredRowsScore(map);
-            var v = MirroredRowsScore(rotatedMap);
-            if (h > v)
-                horizontalCount += h;
-            else
-                verticalCount += v;
+            horizontalCount += MirroredRowsScore(map);
+            verticalCount += MirroredRowsScore(rotatedMap);
         }
         
         Assert.Equal(expectedResult, (horizontalCount * 100) + verticalCount);
@@ -43,15 +39,8 @@ public class Test
             var h = MirroredRowsScore(map);
             var v = MirroredRowsScore(rotatedMap);
             
-            var h2 = MirroredRowScoreWithRepair(map, h - 1);
-            var v2 = MirroredRowScoreWithRepair(rotatedMap, v - 1);
-
-            if (h2 != h && h2 > 0)
-                horizontalCount += h2;
-            else if (v2 != v && v2 > 0)
-                verticalCount += v2;
-            else
-                Assert.Fail("Error");
+            horizontalCount += MirroredRowScoreWithRepair(map, h - 1);
+            verticalCount += MirroredRowScoreWithRepair(rotatedMap, v - 1);
         }
         
         Assert.Equal(expectedResult, (horizontalCount * 100) + verticalCount);
@@ -91,10 +80,8 @@ public class Test
                 j++;
             }
 
-            var max = 0;
-            if (center < map.Length / 2)
-                max = (center + 1) * 2;
-            else
+            var max = (center + 1) * 2;
+            if (center >= map.Length / 2)
                 max = (map.Length - center - 1) * 2;
             var rows = j - i - 1;
             if (max == rows)

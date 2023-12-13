@@ -182,21 +182,4 @@ public class Test
         }
         return toExclude;
     }
-
-    private bool CanEscape(string[] input, string[] rotatedInput, int x, int y) {
-        // Escape to left
-        if (input[y].Substring(0, x).All(c => c == '.' || c == ' '))
-            return true;
-        // Escape to right
-        if (input[y].Substring(x).All(c => c == '.' || c == ' '))
-            return true;
-        // Escape to top
-        if (rotatedInput[x].Substring(0, y).All(c => c == '.' || c == ' '))
-            return true;
-        // Escape to bottom
-        if (rotatedInput[x].Substring(y).All(c => c == '.' || c == ' '))
-            return true;
-
-        return false;
-    }
 }

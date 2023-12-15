@@ -8,7 +8,7 @@ var participants = input.Members.Values.Order().ToArray();
 for (var i = 0; i < participants.Length; i++) {
     var participant = participants[i];
     if (i == 0)
-        Console.WriteLine(participant.Name + $" ({participant.Stars} starts)");
+        Console.WriteLine(participant.Name + $" ({participant.Stars} stars)");
     else {
         var loses = participant.LosesFrom(participants[i - 1]);
         Console.WriteLine(participant.Name + $" ({participant.Stars} stars, {loses} times slower than upper participant)");

@@ -44,8 +44,7 @@ public class Test
                     if (cost < dest.CostHorizontal || dest.CostHorizontal == 0) {
                         dest.CostHorizontal = cost;
                         dest.VerticalDirty = true;
-                        if (!queue.Contains(dest))
-                            queue.Enqueue(dest);
+                        queue.Enqueue(dest);
                     }
                 }
                 item.HorizontalDirty = false;
@@ -57,8 +56,7 @@ public class Test
                     if (cost < dest.CostVertical || dest.CostVertical == 0) {
                         dest.CostVertical = cost;
                         dest.HorizontalDirty = true;
-                        if (!queue.Contains(dest))
-                            queue.Enqueue(dest);
+                        queue.Enqueue(dest);
                     }
                 }
                 item.VerticalDirty = false;

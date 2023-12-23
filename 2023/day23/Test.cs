@@ -35,27 +35,33 @@ public class Test
     }
 
     public int GetLongestRoute(IEnumerable<Route> routes, Position start, Position finish) {
-
+        routes = routes.GroupBy(r => new { r.From, r.To }).Select(g => g.OrderByDescending(r => r.Weight).First()).ToArray();
         var options = routes.GroupBy(o => o.From).ToDictionary(g => g.Key, g => g.ToList());
         var routeFromStart = routes.Single(r => r.From == start); 
-        var routeToFinish = routes.Single(r => r.To == finish);
-        finish = routeToFinish.From;
-
-        var queue = new Queue<Tuple<Position[], int>>();
-        queue.Enqueue(new(new Position[] { routeFromStart.From, routeFromStart.To }, routeFromStart.Weight));
-        var validRoutes = new List<int>();
-        while (queue.Count > 0) {
-            var route = queue.Dequeue();
-            if (route.Item1.Last() == finish)
-                validRoutes.Add(route.Item2);
-            else {
-                var optionsFromEnd = options[route.Item1.Last()].Where(r => !route.Item1.Contains(r.To));
-                foreach (var option in optionsFromEnd) {
-                    queue.Enqueue(new(route.Item1.Append(option.To).ToArray(), route.Item2 + option.Weight));
+        var routesToFinish = routes.Where(r => r.To == finish).ToDictionary(r => r.From, r => r.Weight);
+        
+        var max = 0;
+        foreach (var routeToFinish in routesToFinish) {
+            var queue = new Queue<Tuple<Position[], int>>();
+            queue.Enqueue(new(new Position[] { routeFromStart.To, routeFromStart.From }, routeFromStart.Weight));
+            var validRoutes = new List<int>();
+            while (queue.Count > 0) {
+                var route = queue.Dequeue();
+                var last = route.Item1[0];
+                if (routeToFinish.Key == last)
+                    validRoutes.Add(route.Item2 + routeToFinish.Value);
+                else if(last != finish) {
+                    foreach (var option in options[last]) {
+                        if (!route.Item1.Contains(option.To)) {
+                            var newSet = route.Item1.Prepend(option.To).ToArray();
+                            queue.Enqueue(new(newSet, route.Item2 + option.Weight));
+                        }
+                    }
                 }
             }
+            max = Math.Max(max, validRoutes.Max());
         }
-        return validRoutes.Max() + routeToFinish.Weight;
+        return max;
     }
 
     private IEnumerable<Route> GetRoutes(string[] map, Position position, bool slipperySlopes)
@@ -143,7 +149,7 @@ public class Test
                 if (top != '#' && (!slipperySlopes || top != 'v'))
                     yield return position with { Y = position.Y - 1 };
                 if (bottom != '#')
-                    yield return position with { Y = position.Y+ 1 };
+                    yield return position with { Y = position.Y + 1 };
             } else {
                 throw new NotImplementedException();
             }

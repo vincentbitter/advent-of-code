@@ -36,23 +36,26 @@ public class Test
 
     public int GetLongestRoute(IEnumerable<Route> routes, Position start, Position finish) {
 
-        var options = routes.GroupBy(o => o.From).ToDictionary(g => g.Key, g => g.ToArray());
-        var queue = new Queue<List<Route>>();
-        queue.Enqueue(new List<Route>() { options[start].Single() });
-        var validRoutes = new List<List<Route>>();
+        var options = routes.GroupBy(o => o.From).ToDictionary(g => g.Key, g => g.ToList());
+        var routeFromStart = routes.Single(r => r.From == start); 
+        var routeToFinish = routes.Single(r => r.To == finish);
+        finish = routeToFinish.From;
+
+        var queue = new Queue<Tuple<Position[], int>>();
+        queue.Enqueue(new(new Position[] { routeFromStart.From, routeFromStart.To }, routeFromStart.Weight));
+        var validRoutes = new List<int>();
         while (queue.Count > 0) {
             var route = queue.Dequeue();
-            if (route.Last().To == finish)
-                validRoutes.Add(route);
+            if (route.Item1.Last() == finish)
+                validRoutes.Add(route.Item2);
             else {
-                var optionsFromEnd = options[route.Last().To];
+                var optionsFromEnd = options[route.Item1.Last()].Where(r => !route.Item1.Contains(r.To));
                 foreach (var option in optionsFromEnd) {
-                    if (!route.Any(r => r.From == option.To))
-                        queue.Enqueue(route.Append(option).ToList());
+                    queue.Enqueue(new(route.Item1.Append(option.To).ToArray(), route.Item2 + option.Weight));
                 }
             }
         }
-        return validRoutes.Max(r => r.Sum(p => p.Weight));
+        return validRoutes.Max() + routeToFinish.Weight;
     }
 
     private IEnumerable<Route> GetRoutes(string[] map, Position position, bool slipperySlopes)
@@ -148,5 +151,5 @@ public class Test
     }
 }
 
-public record Position(int X, int Y);
-public record Route(Position From, Position To, int Weight);
+public record struct Position(int X, int Y);
+public record struct Route(Position From, Position To, int Weight);

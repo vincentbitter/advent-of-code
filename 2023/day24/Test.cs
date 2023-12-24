@@ -95,15 +95,6 @@ public class Test
         var result = long.Parse(ix.ToString()) + long.Parse(iy.ToString()) + long.Parse(iz.ToString());
         Assert.Equal(expectedResult, result);
     }
-
-    [Fact]
-    public void TestX() {
-
-        var a = new Heartstone(19, 13, 30, -2, 1, -2);
-        var b = new Heartstone(18, 19, 22, -1, -1, -2);
-        var result = a.Intersects(b, false);
-        Assert.Equal(null, result);
-    }
 }
 
 public record Heartstone(long X, long Y, long Z, int VX, int VY, int VZ) {

@@ -35,7 +35,7 @@ public class Test
         Assert.Equal(expectedResult, r);
     }
 
-    public List<Component> CutInTwo(List<Component> components)
+    public static List<Component> CutInTwo(List<Component> components)
     {
         while (components.Count > 2)
         {
@@ -43,8 +43,12 @@ public class Test
             {
                 var wire = component.Wires.FirstOrDefault(wire =>
                 {
-                    var without = new List<Wire>() { wire };
+                    // Nodes with less than three wires can never have three unique routes
+                    if (wire.From.Wires.Count <= 3 || wire.To.Wires.Count <= 3)
+                        return false;
+
                     // Try remove three different routes
+                    var without = new List<Wire>() { wire };
                     for (int k = 1; k < 3; k++)
                         without.AddRange(wire.From.FindRoute(wire.To, without));
 

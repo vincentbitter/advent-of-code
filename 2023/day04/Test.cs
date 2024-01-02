@@ -2,7 +2,7 @@ using Lib;
 
 namespace day04;
 
-public class Test
+public partial class Test
 {
     [Theory]
     [InlineData("sample.txt", 13)]
@@ -10,19 +10,12 @@ public class Test
     public void PartA(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
+        var games = input.Select(Game.Create).ToArray();
         var total = 0;
-        foreach (var line in input) {
-            var parts = line.Split(": ");
-            var sets = parts[1].Split(" | ");;
-            var game = int.Parse(parts[0].Substring(5));
-            var winningNumbers = sets[0].Split(' ').Where(s => s != "").Select(int.Parse).ToArray();
-            var myNumbers = sets[1].Split(' ').Where(s => s != "").Select(int.Parse).ToArray();
-
-            var points = 0;
-            foreach (var number in myNumbers) {
-                if (winningNumbers.Contains(number))
-                    points = points == 0 ? 1 : points * 2;
-            }
+        foreach (var game in games)
+        {
+            var wins = game.CountWins();
+            var points = (int)Math.Pow(2, wins - 1);
             total += points;
         }
 
@@ -35,19 +28,15 @@ public class Test
     public void PartB(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var copies = Enumerable.Repeat(1, input.Length).ToArray();
-        for(var line = 0; line < input.Length; line++) {
-            var parts = input[line].Split(": ");
-            var sets = parts[1].Split(" | ");
-            var winningNumbers = sets[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
-            var myNumbers = sets[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
+        var games = input.Select(Game.Create).ToArray();
 
-            var good = myNumbers.Count(winningNumbers.Contains);
+        for (var line = 0; line < games.Length; line++)
+        {
+            var good = games[line].CountWins();
             for (var i = 1; i <= good; i++)
-                if (copies.Length > line + i)
-                    copies[line + i] += copies[line];
+                games[line + i].Copies += games[line].Copies;
         }
 
-        Assert.Equal(expectedResult, copies.Sum());
+        Assert.Equal(expectedResult, games.Sum(g => g.Copies));
     }
 }

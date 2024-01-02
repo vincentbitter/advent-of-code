@@ -1,7 +1,6 @@
-using Lib.Interfaces;
+using Lib.Extensions;
+using Lib.Geometry;
 
 namespace day03;
 
-public record Number (int X, int Y, int Width, int Value) : IMapItem {
-    public int Height { get; } = 1;
-}
+public record Number(int X, int Y, int Value) : Object2D(new Point2D(X, Y), new Point2D(X + Value.Length() - 1, Y));

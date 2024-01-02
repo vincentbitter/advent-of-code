@@ -1,8 +1,5 @@
-using Lib.Interfaces;
+using Lib.Geometry;
 
 namespace day03;
 
-public record Symbol (int X, int Y, char Value) : IMapItem {
-    public int Width {get; }= 1;
-    public int Height {get; } = 1;
-}
+public record Symbol(int X, int Y, char Value) : Point2D(X, Y);

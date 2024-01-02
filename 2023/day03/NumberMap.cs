@@ -2,7 +2,7 @@ namespace day03;
 
 public class NumberMap
 {
-    private string[] _lines;
+    private readonly string[] _lines;
 
     public NumberMap(string[] lines) {
         _lines = lines;
@@ -20,7 +20,7 @@ public class NumberMap
                         i++;
                         chars += line[i];
                     }
-                    yield return new Number(indexFrom, l, chars.Length, int.Parse(chars));
+                    yield return new Number(indexFrom, l, int.Parse(chars));
                 }
             }
         }

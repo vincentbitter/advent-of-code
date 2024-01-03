@@ -1,6 +1,4 @@
 using Lib;
-using Lib.Interfaces;
-
 namespace day11;
 
 public class Test
@@ -65,7 +63,7 @@ public class Test
     }
 }
 
-public record Galaxy(int Number, int X, int Y) : ILocation
+public record Galaxy(int Number, int X, int Y)
 {
     
 }

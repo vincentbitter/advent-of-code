@@ -1,5 +1,4 @@
 using Lib;
-using Lib.Interfaces;
 
 namespace day14;
 

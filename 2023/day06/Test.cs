@@ -1,21 +1,10 @@
 using Lib;
+using Lib.Algebra;
 
 namespace day06;
 
 public class Test
 {
-    public long GetMinPressTime(double distance, double maxTime)
-    {
-        return (long) Math.Floor((maxTime - Math.Sqrt(maxTime * maxTime - 4d * distance)) / 2d) + 1;
-    }
-
-    public long CountBetterPressTimes(long maxTime, long minDistance)
-    {
-        var minPressTime = GetMinPressTime(minDistance, maxTime);
-        var maxPressTime = maxTime - minPressTime;
-        return maxPressTime - minPressTime + 1;
-    }
-
     [Theory]
     [InlineData("sample.txt", 288)]
     [InlineData("input.txt", 114400)]
@@ -44,5 +33,22 @@ public class Test
 
         var total = CountBetterPressTimes(maxTime, minDistance);
         Assert.Equal(expectedResult, total);
+    }
+
+    // (pressTime * (maxTime - pressTime)) = distance
+    // (pressTime)(maxTime - pressTime) - distance = 0
+    // -(pressTime^2) + (maxTime * pressTime) - distance = 0
+    // Quadratic equation: ax^2 + bx + c
+    // x = pressTime
+    // a = -1
+    // b = maxTime
+    // c = -distance
+    public long CountBetterPressTimes(long maxTime, long minDistance)
+    {
+        var equation = new QuadraticEquation(-1, maxTime, -minDistance);
+        var result = equation.Solve();
+        var minPressTime = (long) Math.Floor(result.Item2) + 1;
+        var maxPressTime = (long) Math.Ceiling(result.Item1) - 1;
+        return maxPressTime - minPressTime + 1;
     }
 }

@@ -1,4 +1,6 @@
 using Lib;
+using Lib.Geometry;
+using Lib.Geometry.Extensions;
 namespace day11;
 
 public class Test
@@ -20,25 +22,28 @@ public class Test
         var input = Parser.ReadAllLines(fileName);
 
         // Add 9 empty rows instead of 10, because there is already 1 line
-        multiplier--; 
-    
+        multiplier--;
+
         // Find empty columns
         var xEmpty = new List<int>();
-        for (var x = 0; x < input[0].Length; x++) {
+        for (var x = 0; x < input[0].Length; x++)
+        {
             if (!input.Any(l => l[x] == '#'))
                 xEmpty.Add(x);
         }
 
         // Find galaxy locations
-        var galaxies = new List<Galaxy>();
+        var galaxies = new List<Point2D>();
         var yOffset = 0;
-        for(var y = 0; y < input.Length; y++) {
+        for (var y = 0; y < input.Length; y++)
+        {
             var anyGalaxyOnRow = false;
-            for (var x = 0; x < input[0].Length; x++) {
-                if (input[y][x] == '#') {
-                    galaxies.Add(new Galaxy(
-                        galaxies.Count + 1,
-                        x + xEmpty.Count(i => i < x) * multiplier, 
+            for (var x = 0; x < input[0].Length; x++)
+            {
+                if (input[y][x] == '#')
+                {
+                    galaxies.Add(new Point2D(
+                        x + xEmpty.Count(i => i < x) * multiplier,
                         y + yOffset * multiplier
                     ));
                     anyGalaxyOnRow = true;
@@ -51,19 +56,17 @@ public class Test
         }
 
         // Find shortest routes
-        var result = galaxies
-            .Select(g => galaxies
-                .Where(g2 => g2.Number > g.Number)
-                .Select(g2 => (long)Math.Abs(g.X - g2.X) + Math.Abs(g.Y - g2.Y))
-                .Sum()
-            ).Sum();
+        var result = 0L;
+        for (var i = 0; i < galaxies.Count - 1; i++)
+        {
+            var from = galaxies[i];
+            for (var j = i + 1; j < galaxies.Count; j++)
+            {
+                result += from.ManhattanDistance(galaxies[j]);
+            }
+        }
 
         Assert.Equal(expectedResult, result);
 
     }
-}
-
-public record Galaxy(int Number, int X, int Y)
-{
-    
 }

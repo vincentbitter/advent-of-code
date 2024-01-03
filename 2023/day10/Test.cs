@@ -1,4 +1,6 @@
 using Lib;
+using Lib.Geometry;
+using Lib.Geometry.Extensions;
 
 namespace day10;
 
@@ -10,23 +12,12 @@ public class Test
     public void PartA(string fileName, int expectedResult, char startingPositionChar)
     {
         var input = Parser.ReadAllLines(fileName);
-        var maxX = input[0].Length;
-        var startLine = input.Single(line => line.Contains('S'));
-        var startY = input.ToList().IndexOf(startLine);
-        var startX = startLine.IndexOf('S');
+        var map = new CharMap(input);
+        var start = map.FindChar('S');
+        map.SetChar(start, startingPositionChar);
+        var pipes = GetPipeRoute(map, start);
 
-        var count = 0;
-        var previous = new Tuple<int,int>(startX,startY);
-        var position = new Tuple<int,int>(startX,startY);
-        var curentChar = startingPositionChar;
-        while (curentChar != 'S') {
-            var newPosition = GetNextPosition(curentChar, previous, position);
-            previous = position;
-            position = newPosition;
-            curentChar = GetChar(input, position);
-            count++;
-        }
-        Assert.Equal(expectedResult, count / 2);
+        Assert.Equal(expectedResult, pipes.Count() / 2);
     }
 
     [Theory]
@@ -37,149 +28,112 @@ public class Test
     public void PartB(string fileName, int expectedResult, char startingPositionChar)
     {
         var input = Parser.ReadAllLines(fileName);
-        var input2 = new string[input.Length + 2];
-        input2[0] = "".PadLeft(input[0].Length + 2, '.');
-        input2[input2.Length - 1] = input2[0];
-        for(var y = 0; y < input.Length; y++)
-            input2[y+1] = '.' + input[y] + '.';
-        input = input2;
+        var map = new CharMap(input);
+        var start = map.FindChar('S');
+        map.SetChar(start, startingPositionChar);
+        var pipes = GetPipeRoute(map, start);
 
-        var maxX = input[0].Length;
-        var startLine = input.Single(line => line.Contains('S'));
-        var startY = input.ToList().IndexOf(startLine);
-        var startX = startLine.IndexOf('S');
+        map = ExplodeMap(map, pipes);
+        map.AddBorder('.');
 
-        var previous = new Tuple<int,int>(startX,startY);
-        var position = new Tuple<int,int>(startX,startY);
-        var curentChar = startingPositionChar;
-        var visited = new List<Tuple<int,int>>();
-        while (curentChar != 'S') {
-            var newPosition = GetNextPosition(curentChar, previous, position);
-            previous = position;
-            position = newPosition;
-            curentChar = GetChar(input, position);
-            visited.Add(position);
-        }
-
-        //var count = 0;
-        var newInput = new string[input.Length * 2 - 1];
-        for (var y = 0; y < input.Length; y++) {
-            for (var x = 0; x < maxX; x++) {
-                var charachter = input[y][x];
-                if (charachter == 'S')
-                    charachter = startingPositionChar;
-                if (visited.Any(v => v.Item1 == x && v.Item2 == y)) {
-                    if (charachter == 'F' || charachter == 'L' || charachter == '-')
-                        newInput[y*2] += charachter + "-";
-                    else if (charachter == 'J' || charachter == '7' || charachter == '|')
-                        newInput[y*2] += charachter + " ";
-                    
-                    if (y < input.Length - 1) {
-                        if (charachter == 'F' || charachter == '7' || charachter == '|')
-                            newInput[y*2+1] += "| ";
-                        else if (charachter == 'J' || charachter == 'L' || charachter == '-')
-                            newInput[y*2+1] += "  ";
-                    }
-                }
-                else {
-                    newInput[y*2] += ". ";
-                    if (y < input.Length - 1)
-                        newInput[y*2+1] += "  ";
-                }
-            }
-        }
-
-        var count = 0;
-        var itemsToExclude = GetIemsToExclude(newInput, 0, 0);
-        for (var y = 0; y < newInput.Length; y++) {
-            for (var x = 0; x < newInput[0].Length; x++) {
-                if (newInput[y][x] == '.' && !itemsToExclude.Contains(new Tuple<int, int>(x,y)))
-                    count++;
-            }
-        }
+        var floodSize = map.FloodFillSize(new(0, 0), new[] { '.', ' ' }, new[] { '.' });
+        var totalDots = map.Count('.');
+        var count = totalDots - floodSize;
 
         Assert.Equal(expectedResult, count);
     }
 
-    private Tuple<int,int> GetNextPosition(char current, Tuple<int,int> previous, Tuple<int,int> position) {
-        if (current == '|') {
-            var toX = position.Item1;
-            var toY = 2 * position.Item2 - previous.Item2;
-            return new Tuple<int,int>(toX,toY);
-        }
-        if (current == '-') {
-            var toX = 2 * position.Item1 - previous.Item1;
-            var toY = position.Item2;
-            return new Tuple<int,int>(toX,toY);
-        }
-        if (current == 'L') {
-            if (position.Item2 > previous.Item2)
-                return new Tuple<int, int>(position.Item1 + 1, position.Item2); // Right
-            return new Tuple<int, int>(position.Item1, position.Item2 - 1); // Up
-        }
-        if (current == 'J') {
-            if (position.Item2 > previous.Item2)
-                return new Tuple<int, int>(position.Item1 - 1, position.Item2); // Left
-            return new Tuple<int, int>(position.Item1, position.Item2 - 1); // Up
-        }
-        if (current == '7') {
-            if (position.Item2 < previous.Item2)
-                return new Tuple<int, int>(position.Item1 - 1, position.Item2); // Left
-            return new Tuple<int, int>(position.Item1, position.Item2 + 1); // Down
-        }
-        if (current == 'F') {
-            if (position.Item2 < previous.Item2)
-                return new Tuple<int, int>(position.Item1 + 1, position.Item2); // Right
-            return new Tuple<int, int>(position.Item1, position.Item2 + 1); // Down
-        }
-        if (current == '.') {
-            throw new NotImplementedException("Landed on the ground!");
-        }
-        throw new NotImplementedException("Don't recognize: " + current);
-    }
+    private static CharMap ExplodeMap(CharMap map, HashSet<Point2D> pipes)
+    {
+        var newInput = new string[map.Height * 2 - 1];
+        for (var y = 0; y < map.Height; y++)
+        {
+            for (var x = 0; x < map.Width; x++)
+            {
+                var character = map.GetChar(x, y);
 
-    private char GetChar(string[] map, Tuple<int,int> position) {
-        return map[position.Item2][position.Item1];
-    }
+                if (pipes.Contains(new Point2D(x, y)))
+                {
+                    if (character == 'F' || character == 'L' || character == '-')
+                        newInput[y * 2] += character + "-";
+                    else if (character == 'J' || character == '7' || character == '|')
+                        newInput[y * 2] += character + " ";
 
-    private List<Tuple<int,int>> _next = new List<Tuple<int,int>>();
-    private List<Tuple<int,int>> _visited = new List<Tuple<int,int>>();
-
-    private IEnumerable<Tuple<int,int>> X(string[] input) {
-        _visited.AddRange(_next);
-        var items = _next.ToList();
-        _next.Clear();
-        foreach (var p in items) {
-            var x = p.Item1;
-            var y = p.Item2;
-            if (input[y][x] == '.' || input[y][x] == ' ') {
-                yield return new Tuple<int, int>(x,y);
-                if (x < input[y].Length - 1) {
-                    _next.Add(new Tuple<int, int>(x + 1, y));
+                    if (y < map.Height - 1)
+                    {
+                        if (character == 'F' || character == '7' || character == '|')
+                            newInput[y * 2 + 1] += "| ";
+                        else if (character == 'J' || character == 'L' || character == '-')
+                            newInput[y * 2 + 1] += "  ";
+                    }
                 }
-                if (y < input.Length - 1) {
-                    _next.Add(new Tuple<int, int>(x, y + 1));
-                }
-                if (x > 0) {
-                    _next.Add(new Tuple<int, int>(x - 1, y));
-                }
-                if (y > 0) {
-                    _next.Add(new Tuple<int, int>(x, y - 1));
+                else
+                {
+                    newInput[y * 2] += ". ";
+                    if (y < map.Height - 1)
+                        newInput[y * 2 + 1] += "  ";
                 }
             }
         }
-        _next = _next.Except(_visited).ToList();
+        return new CharMap(newInput);
     }
 
-    private IEnumerable<Tuple<int,int>> GetIemsToExclude(string[] input, int x, int y) {
-        _visited.Add(new Tuple<int, int>(x, y));
-        _next.Add(new Tuple<int, int>(x + 1, y));
-        _next.Add(new Tuple<int, int>(x, y + 1));
-        var toExclude = new List<Tuple<int,int>>();
-        toExclude.Add(new Tuple<int, int>(x,y));
-        while (_next.Any()) {
-            toExclude.AddRange(X(input));
+    private static HashSet<Point2D> GetPipeRoute(CharMap map, Point2D start)
+    {
+        var pipes = new HashSet<Point2D>();
+        var previous = start;
+        var position = previous;
+        while (pipes.Add(position))
+        {
+            var newPosition = GetNextPosition(map.GetChar(position), previous, position);
+            previous = position;
+            position = newPosition;
         }
-        return toExclude;
+        return pipes;
+    }
+
+    private static Point2D GetNextPosition(char current, Point2D previous, Point2D position)
+    {
+        if (current == '|')
+        {
+            var toX = position.X;
+            var toY = 2 * position.Y - previous.Y;
+            return new(toX, toY);
+        }
+        if (current == '-')
+        {
+            var toX = 2 * position.X - previous.X;
+            var toY = position.Y;
+            return new(toX, toY);
+        }
+        if (current == 'L')
+        {
+            if (position.Y > previous.Y)
+                return new(position.X + 1, position.Y); // Right
+            return new(position.X, position.Y - 1); // Up
+        }
+        if (current == 'J')
+        {
+            if (position.Y > previous.Y)
+                return new(position.X - 1, position.Y); // Left
+            return new(position.X, position.Y - 1); // Up
+        }
+        if (current == '7')
+        {
+            if (position.Y < previous.Y)
+                return new(position.X - 1, position.Y); // Left
+            return new(position.X, position.Y + 1); // Down
+        }
+        if (current == 'F')
+        {
+            if (position.Y < previous.Y)
+                return new(position.X + 1, position.Y); // Right
+            return new(position.X, position.Y + 1); // Down
+        }
+        if (current == '.')
+        {
+            throw new NotImplementedException("Landed on the ground!");
+        }
+        throw new NotImplementedException("Don't recognize: " + current);
     }
 }

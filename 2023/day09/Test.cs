@@ -32,25 +32,27 @@ public class Test
         Assert.Equal(expectedResult, nextValues.Sum());
     }
 
-    private int NextValue(int[] values) {
+    private int NextValue(int[] values)
+    {
         if (values.Distinct().Count() == 1)
             return values[0];
-        
+
         var diffs = new List<int>();
-        for(var i = 1; i < values.Length; i++)
+        for (var i = 1; i < values.Length; i++)
             diffs.Add(values[i] - values[i - 1]);
-        var increment =  NextValue(diffs.ToArray());
+        var increment = NextValue(diffs.ToArray());
         return values.Last() + increment;
     }
 
-    private int PreviousValue(int[] values) {
+    private int PreviousValue(int[] values)
+    {
         if (values.Distinct().Count() == 1)
             return values[0];
-        
+
         var diffs = new List<int>();
-        for(var i = 1; i < values.Length; i++)
+        for (var i = 1; i < values.Length; i++)
             diffs.Add(values[i] - values[i - 1]);
-        var increment =  PreviousValue(diffs.ToArray());
+        var increment = PreviousValue(diffs.ToArray());
         return values.First() - increment;
     }
 }

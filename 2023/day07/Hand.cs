@@ -2,12 +2,13 @@ namespace day07;
 
 public class Hand : IComparable
 {
-    private char[] Cards {get;}
-    public int Bid {get;}
-    public int Score {get;}
+    private char[] Cards { get; }
+    public int Bid { get; }
+    public int Score { get; }
     private bool _jokerRule;
 
-    public Hand(string cards, int bid, bool jokerRule) {
+    public Hand(string cards, int bid, bool jokerRule)
+    {
         _jokerRule = jokerRule;
         Cards = cards.ToArray();
         Bid = bid;
@@ -49,7 +50,7 @@ public class Hand : IComparable
 
         if (bestSet == 3)
             return 4;
-        
+
         if (bestSet == 4)
             return 6;
 
@@ -64,7 +65,8 @@ public class Hand : IComparable
         'J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A'
     };
 
-    private int CompareCard(char a, char b) {
+    private int CompareCard(char a, char b)
+    {
         var cardValues = _jokerRule ? _cardValuesWithJokerRule : _cardValues;
         var aScore = cardValues.IndexOf(a);
         var bScore = cardValues.IndexOf(b);
@@ -77,16 +79,15 @@ public class Hand : IComparable
 
     public int CompareTo(object? obj)
     {
-        var other = obj as Hand;
-        if (other == null)
-            throw new Exception("Can only compare hands!");
+        var other = obj as Hand ?? throw new Exception("Can only compare hands!");
 
         if (Score > other.Score)
             return 1;
         if (other.Score > Score)
             return -1;
-        
-        for (var i = 0; i < 5; i++) {
+
+        for (var i = 0; i < 5; i++)
+        {
             var result = CompareCard(Cards[i], other.Cards[i]);
             if (result != 0)
                 return result;

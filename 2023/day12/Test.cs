@@ -10,7 +10,13 @@ public class Test
     public void PartA(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var result = input.Select(i => i.Split(' ')).Select(i => CountPossibleArrangements(i[0], i[1].Split(',').Select(int.Parse).ToArray())).ToArray();
+        var result = input
+            .Select(i => i.Split(' '))
+            .Select(i => CountPossibleArrangements(
+                i[0],
+                i[1].Split(',').Select(int.Parse).ToArray()
+            ))
+            .ToArray();
         Assert.Equal(expectedResult, result.Sum());
     }
 
@@ -20,17 +26,17 @@ public class Test
     public void PartB(string fileName, long expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var result = input.Select(i => i.Split(' ')).Select(i => {
-            Console.WriteLine(i);
-            return CountPossibleArrangements(
+        var result = input
+            .Select(i => i.Split(' '))
+            .Select(i => CountPossibleArrangements(
                 ExtendRange(i[0], 5, '?'),
                 ExtendRange(i[1], 5, ',').Split(',').Select(int.Parse).ToArray()
-            );
-        }).ToArray();
+            )).ToArray();
         Assert.Equal(expectedResult, result.Sum());
     }
 
-    private string ExtendRange(string original, int times, char separator) {
+    private string ExtendRange(string original, int times, char separator)
+    {
         var a = new string[times];
         Array.Fill(a, original);
         return string.Join(separator, a);
@@ -38,92 +44,98 @@ public class Test
 
     private long CountPossibleArrangements(string springs, int[] groupSizes)
     {
+        var springsArray = springs
+            .Split('.', StringSplitOptions.RemoveEmptyEntries)
+            .Select(i => new Spring(i))
+            .ToArray();
+
         return CountPossibleArrangementsWithCache(
-            springs.Split('.', StringSplitOptions.RemoveEmptyEntries), 
-            groupSizes, 
-            new Dictionary<string, long>()
+            springsArray,
+            new SpringPointer(0, 0),
+            groupSizes,
+            0,
+            new Dictionary<int, long>()
         );
     }
 
-    private long CountPossibleArrangementsWithCache(string[] springs, int[] groupSizes, Dictionary<string,long> cache)
+    private long CountPossibleArrangementsWithCache(Spring[] springs, SpringPointer pointer, int[] groupSizes, int groupSkip, Dictionary<int, long> cache)
     {
-        var cacheKey = springs.Sum(s => s.Length) + "-" + groupSizes.Length;
-        if (!cache.ContainsKey(cacheKey))
-            cache[cacheKey] = CountPossibleArrangements(springs, groupSizes, cache);
-        return cache[cacheKey];
+        var cacheKey = (pointer.Spring * 10000) + (pointer.Index * 100) + groupSkip;
+
+        if (!cache.TryGetValue(cacheKey, out var result))
+        {
+            result = CountPossibleArrangements(springs, pointer, groupSizes, groupSkip, cache);
+            cache[cacheKey] = result;
+        }
+        return result;
     }
 
-    private long CountPossibleArrangements(string[] springs, int[] groupSizes, Dictionary<string,long> cache)
+    private long CountPossibleArrangements(Spring[] springs, SpringPointer pointer, int[] groupSizes, int groupSkip, Dictionary<int, long> cache)
     {
-        if (springs.Length == 0 && groupSizes.Length == 0)
-            return 1;
-
-        if (springs.Length == 0 && groupSizes.Length > 0)
-            return 0;
+        if (springs.Length == pointer.Spring)
+            return groupSizes.Length > groupSkip ? 0 : 1;
 
         var total = 0L;
-        var leftOverSprings = springs.Skip(1).ToArray();
-        var firstSpring = springs.Length > 0 ? springs[0].IndexOf('#') : -1;
+        var firstSpring = springs[pointer.Spring].FirstSpringAfter(pointer.Index);
+        var groupSize = groupSizes.Length > groupSkip ? groupSizes[groupSkip] : 0;
 
         // If spring required, but next spring is too big or there is no next spring, 
         // then return 0, because no combination is possible
-        if (firstSpring >= 0 && (groupSizes.Length == 0 || springs[0].Length < groupSizes[0]))
+        if (firstSpring >= 0 && (groupSizes.Length == groupSkip || springs[pointer.Spring].Size - pointer.Index < groupSize))
             return 0;
 
         // Skip group if no required springs,
         // and try first group at any position
-        if (firstSpring == -1) {
-            total += CountPossibleArrangementsWithCache(leftOverSprings, groupSizes, cache);
+        if (firstSpring == -1)
+        {
+            // Try skip group
+            total += CountPossibleArrangementsWithCache(springs, new SpringPointer(pointer.Spring + 1, 0), groupSizes, groupSkip, cache);
 
-            if (groupSizes.Length == 0 || groupSizes[0] > springs[0].Length)
+            // No groups left or group doesn't fit in current spring
+            if (groupSizes.Length == groupSkip || groupSize > springs[pointer.Spring].Size - pointer.Index)
                 return total;
 
-            var maxIndex = springs[0].Length - groupSizes[0];
-            
-            if (groupSizes.Length == 1 && leftOverSprings.Any(l => l.Contains('#')))
+            // One more group left, but a future spring requires one
+            if (groupSizes.Length == groupSkip + 1 && (springs[pointer.Spring].FirstSpringAfter(pointer.Index) > -1 || springs.Skip(pointer.Spring + 1).Any(l => l.RequiresSpring)))
                 return total;
+
+            var positions = springs[pointer.Spring].Size - groupSize - pointer.Index;
 
             // If no more groups left, return amount of options
-            if (groupSizes.Length == 1)
-                return total + maxIndex + 1;
+            if (groupSizes.Length == groupSkip + 1)
+                return total + positions + 1;
 
-            var leftGroupSizes = groupSizes.Skip(1).ToArray();
-            for (var i = 0; i <= maxIndex; i++) {
-                var a = new List<string>();
-                if (springs[0].Length > i + groupSizes[0] + 1)
-                    a.Add(springs[0].Substring(i + groupSizes[0] + 1));
-                a.AddRange(leftOverSprings);
-                total += CountPossibleArrangementsWithCache(a.ToArray(), leftGroupSizes, cache);
+            for (var i = 0; i <= positions; i++)
+            {
+                var newPointer = pointer.Move(springs, i + groupSize + 1);
+                total += CountPossibleArrangementsWithCache(springs, newPointer, groupSizes, groupSkip + 1, cache);
             }
-        } 
+        }
         // Try fit group before first required spring,
         // and on first required spring
-        else {
+        else
+        {
             // Before required spring
-            var maxIndex = firstSpring - 1 - groupSizes[0];
+            var maxIndex = firstSpring - 1 - groupSize;
+            var positions = maxIndex - pointer.Index;
 
-            var leftGroupSizes = groupSizes.Skip(1).ToArray();
-            for (var i = 0; i <= maxIndex; i++) {
-                var a = new List<string>();
-                if (springs[0].Length > i + groupSizes[0] + 1)
-                    a.Add(springs[0].Substring(i + groupSizes[0] + 1));
-                a.AddRange(leftOverSprings);
-                total += CountPossibleArrangementsWithCache(a.ToArray(), leftGroupSizes, cache);
+            for (var i = 0; i <= positions; i++)
+            {
+                var newPointer = pointer.Move(springs, i + groupSize + 1);
+                total += CountPossibleArrangementsWithCache(springs, newPointer, groupSizes, groupSkip + 1, cache);
             }
 
             // On required spring
-            maxIndex = Math.Min(firstSpring, springs[0].Length - groupSizes[0]);
-            var minIndex = Math.Max(0, firstSpring + 1 - groupSizes[0]);
-            for (var i = minIndex; i <= maxIndex; i++) {
+            maxIndex = Math.Min(firstSpring, springs[pointer.Spring].Size - groupSize);
+            var minIndex = Math.Max(pointer.Index, firstSpring + 1 - groupSize);
+            for (var i = minIndex; i <= maxIndex; i++)
+            {
                 // Ignore positions if next to required spring
-                if (springs[0].Length > i + groupSizes[0] && springs[0][i + groupSizes[0]] == '#')
+                if (springs[pointer.Spring].Size > i + groupSize && springs[pointer.Spring].RequiresSpringAt(i + groupSize))
                     continue;
 
-                var a = new List<string>();
-                if (springs[0].Length > i + groupSizes[0] + 1)
-                    a.Add(springs[0].Substring(i + groupSizes[0] + 1));
-                a.AddRange(leftOverSprings);
-                total += CountPossibleArrangementsWithCache(a.ToArray(), leftGroupSizes, cache);
+                var newPointer = pointer.Move(springs, i + groupSize + 1 - pointer.Index);
+                total += CountPossibleArrangementsWithCache(springs, newPointer, groupSizes, groupSkip + 1, cache);
             }
         }
 

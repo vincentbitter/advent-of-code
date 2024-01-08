@@ -46,7 +46,7 @@ public class Test
 
         var maxY = input.Length;
         var maxX = input[0].Length - 1;
-        List<double> history = new List<double>();
+        var history = new HashSet<long>();
         var roundRocks = rocks.Where(r => r.IsRound()).ToList();
         var skipped = false;
         for (var spin = 1; spin <= 1_000_000_000; spin++) {
@@ -79,32 +79,24 @@ public class Test
             }
             
             if (!skipped) {
-                var totalX = roundRocks.Sum(r => UniqueValue(r.X, r.Y));
+                var totalX = roundRocks.Sum(r => (long)r.GetHashCode());
                 var total = roundRocks.Sum(r => r.Y);
-                if (history.Any(r => r == totalX)) {
+                if (!history.Add(totalX)) {
                     skipped = true;
-                    var previous = history.IndexOf(totalX) + 1;
+                    var previous = history.ToList().IndexOf(totalX) + 1;
                     var size = previous - spin;
                     var left = (1_000_000_000 - spin) % size;
                     spin = 1_000_000_000 - left;
                 }
-                
-                history.Add(totalX);
             }
         }
 
         var total2 = roundRocks.Sum(r => r.Y);
         Assert.Equal(expectedResult, total2);
     }
-
-    private long UniqueValue(int x, int y) {
-        return x > y 
-            ? y | ((long)x << 32)
-            : x | ((long)y << 32);
-    }
 }
 
-public class Rock {
+public record Rock {
     private bool _round = false;
     public int X {get; private set;}
     public int Y {get; private set;}

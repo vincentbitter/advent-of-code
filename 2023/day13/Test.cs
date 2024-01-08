@@ -1,4 +1,5 @@
 using Lib;
+using Lib.Extensions;
 
 namespace day13;
 
@@ -10,17 +11,17 @@ public class Test
     [InlineData("input.txt", 39939)]
     public void PartA(string fileName, int expectedResult)
     {
-        var input = Parser.ReadAllLines(fileName);
-        var inputs = ParseInput(input);
-        
+        var input = Parser.ReadAllLines(fileName).SplitByValue("");
+
         var verticalCount = 0;
         var horizontalCount = 0;
-        foreach(var map in inputs) {
-            var rotatedMap = RotateRight(map);
+        foreach (var map in input)
+        {
+            var rotatedMap = map.RotateClockwise();
             horizontalCount += MirroredRowsScore(map);
             verticalCount += MirroredRowsScore(rotatedMap);
         }
-        
+
         Assert.Equal(expectedResult, (horizontalCount * 100) + verticalCount);
     }
 
@@ -29,53 +30,35 @@ public class Test
     [InlineData("input.txt", 32069)]
     public void PartB(string fileName, int expectedResult)
     {
-        var input = Parser.ReadAllLines(fileName);
-        var inputs = ParseInput(input);
-        
+        var input = Parser.ReadAllLines(fileName).SplitByValue("");
+
         var verticalCount = 0;
         var horizontalCount = 0;
-        foreach(var map in inputs) {
-            var rotatedMap = RotateRight(map);
+        foreach (var map in input)
+        {
+            var rotatedMap = map.RotateClockwise();
             var h = MirroredRowsScore(map);
             var v = MirroredRowsScore(rotatedMap);
-            
+
             horizontalCount += MirroredRowScoreWithRepair(map, h - 1);
             verticalCount += MirroredRowScoreWithRepair(rotatedMap, v - 1);
         }
-        
+
         Assert.Equal(expectedResult, (horizontalCount * 100) + verticalCount);
     }
 
-    private List<string[]> ParseInput(string[] input) {
-        var inputs = new List<string[]>();
-        var start = 0;
-        for (var row = 0; row < input.Length; row++) {
-            if (input[row] == "") {
-                inputs.Add(input.Skip(start).Take(row - start).ToArray());
-                start = row + 1;
-            }
-        }
-        inputs.Add(input.Skip(start).Take(input.Length - start).ToArray());
-        return inputs;
-    }
-
-    private string[] RotateRight(string[] map) {
-        var rotatedInput = new string[map[0].Length];
-        for (var row = map.Length - 1; row >= 0 ; row--)
-            for (var column = 0; column < map[0].Length; column++)
-                rotatedInput[column] += map[row][column];
-        return rotatedInput;
-    }
-
-    private int MirroredRowsScore(string[] map, int skipIndex = -1) {
+    private int MirroredRowsScore(string[] map, int skipIndex = -1)
+    {
         var centers = FindCenterIndexes(map);
-        foreach (var center in centers) {
+        foreach (var center in centers)
+        {
             if (center == skipIndex)
                 continue;
 
             var i = center;
             var j = center + 1;
-            while (i >= 0 && j < map.Length && map[i] == map[j]) {
+            while (i >= 0 && j < map.Length && map[i] == map[j])
+            {
                 i--;
                 j++;
             }
@@ -90,23 +73,26 @@ public class Test
         return 0;
     }
 
-    private int[] FindCenterIndexes(string[] map) {
-        var centers = new List<int>();
-        for (var i = 1; i < map.Length; i++) {
-            if (map[i] == map[i-1]) {
-                centers.Add(i - 1);
+    private static IEnumerable<int> FindCenterIndexes(string[] map)
+    {
+        for (var i = 1; i < map.Length; i++)
+        {
+            if (map[i] == map[i - 1])
+            {
+                yield return i - 1;
             }
         }
-        return centers.ToArray();
     }
 
     private int MirroredRowScoreWithRepair(string[] map, int skipIndex)
     {
         var top = 0;
-        for (var row = 0; row < map.Length; row++) {
-            for (var column = 0; column < map[0].Length; column++) {
+        for (var row = 0; row < map.Length; row++)
+        {
+            for (var column = 0; column < map[0].Length; column++)
+            {
                 var newMap = map.ToArray();
-                newMap[row] = newMap[row].Substring(0, column) 
+                newMap[row] = newMap[row].Substring(0, column)
                     + (map[row][column] == '.' ? '#' : '.')
                     + newMap[row].Substring(column + 1);
                 var score = MirroredRowsScore(newMap, skipIndex);

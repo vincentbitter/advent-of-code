@@ -10,16 +10,8 @@ public class Test
     public void PartA(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var beams = new List<Beam> { new Beam(0, 0, Direction.Right) };
-        var visited = new List<Tuple<int,int>>();
-        var visited2 = new List<Tuple<int,int,Direction>>();
-        while (beams.Any()) {
-            visited.AddRange(beams.Select(b => new Tuple<int, int>(b.X, b.Y)));
-            var oldBeams = beams.Where(b => !visited2.Contains(new Tuple<int, int, Direction>(b.X, b.Y, b.Direction))).ToList();
-            visited2.AddRange(beams.Select(b => new Tuple<int, int, Direction>(b.X, b.Y, b.Direction)));
-            beams = oldBeams.SelectMany(b => b.MoveNext(input)).ToList();
-        }
-        Assert.Equal(expectedResult, visited.Distinct().Count());
+        var total = CountTiles(input, 0, 0, Direction.Right);
+        Assert.Equal(expectedResult, total);
     }
 
     [Theory]
@@ -28,41 +20,50 @@ public class Test
     public void PartB(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var max = 0;
 
-        for (var x = 0; x < input[0].Length; x++) {
-            max = Math.Max(max, CountTiles(input, x, 0, Direction.Down));
-            max = Math.Max(max, CountTiles(input, x, input.Length - 1, Direction.Up));
+        var results = new List<int>();
+        for (var x = 0; x < input[0].Length; x++)
+        {
+            results.Add(CountTiles(input, x, 0, Direction.Down));
+            results.Add(CountTiles(input, x, input.Length - 1, Direction.Up));
         }
-        for (var y = 0; y < input.Length; y++) {
-            max = Math.Max(max, CountTiles(input, 0, y, Direction.Right));
-            max = Math.Max(max, CountTiles(input, input[0].Length - 1, y, Direction.Left));
+        for (var y = 0; y < input.Length; y++)
+        {
+            results.Add(CountTiles(input, 0, y, Direction.Right));
+            results.Add(CountTiles(input, input[0].Length - 1, y, Direction.Left));
         }
 
-        Assert.Equal(expectedResult, max);
+        Assert.Equal(expectedResult, results.Max());
     }
 
-    private int CountTiles(string[] map, int x, int y, Direction direction) {
-        var beams = new List<Beam> { new Beam(x, y, direction) };
-        var visited = new List<Tuple<int,int>>();
-        var visited2 = new List<Tuple<int,int,Direction>>();
-        while (beams.Any()) {
-            visited.AddRange(beams.Select(b => new Tuple<int, int>(b.X, b.Y)));
-            var oldBeams = beams.Where(b => !visited2.Contains(new Tuple<int, int, Direction>(b.X, b.Y, b.Direction))).ToList();
-            visited2.AddRange(beams.Select(b => new Tuple<int, int, Direction>(b.X, b.Y, b.Direction)));
-            beams = oldBeams.SelectMany(b => b.MoveNext(map)).ToList();
+    private static int CountTiles(string[] map, int x, int y, Direction direction)
+    {
+        var beams = new List<Beam> { new(x, y, direction) };
+        var visited = new HashSet<Location>();
+        var visited2 = new HashSet<Move>();
+        while (beams.Any())
+        {
+            foreach (var beam in beams)
+                visited.Add(new Location(beam.X, beam.Y));
+
+            beams = beams.Where(b => visited2.Add(new Move(b.X, b.Y, b.Direction)))
+                .SelectMany(b => b.MoveNext(map)).ToList();
         }
-        return visited.Distinct().Count();
+        return visited.Count();
     }
 }
 
+public record struct Location(int X, int Y);
+public record struct Move(int X, int Y, Direction Direction);
+
 public record Beam
 {
-    public int X {get;set;}
-    public int Y {get;set;}
-    public Direction Direction {get;set;}
+    public int X { get; set; }
+    public int Y { get; set; }
+    public Direction Direction { get; set; }
 
-    public Beam(int x, int y, Direction direction) {
+    public Beam(int x, int y, Direction direction)
+    {
         X = x;
         Y = y;
         Direction = direction;
@@ -209,12 +210,14 @@ public record Beam
         }
     }
 
-    private char GetPositionType(string[] map) {
+    private char GetPositionType(string[] map)
+    {
         return map[Y][X];
     }
 }
 
-public enum Direction {
+public enum Direction
+{
     Left,
     Right,
     Up,

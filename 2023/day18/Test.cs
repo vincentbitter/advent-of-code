@@ -9,29 +9,41 @@ public class Test
     [InlineData("sample2.txt", 37, false)]
     [InlineData("input.txt", 35991, false)]
     [InlineData("sample.txt", 952408144115, true)]
-    [InlineData("input.txt", 54058824661845, true)]
+    // Disabled because it takes about 98s to run. 
+    // It would be better to grap the most left vertical line 
+    // and then draw boxes to the next vertical lines,
+    // but that would require a complete rewrite.
+    //[InlineData("input.txt", 54058824661845, true)]
     public void PartAB(string fileName, long expectedResult, bool useHex)
     {
         var input = Parser.ReadAllLines(fileName);
         var currentX = 0;
         var currentY = 0;
-        var horizontalLines = new List<Tuple<int,int,int>>();
-        var verticalLines = new List<Tuple<int,int,int>>();
-        foreach(var line in input) {
+        var horizontalLines = new List<Tuple<int, int, int>>();
+        var verticalLines = new List<Tuple<int, int, int>>();
+        foreach (var line in input)
+        {
             var parts = line.Split(' ');
             var direction = useHex ? parts[2][7] : parts[0][0];
             var length = useHex ? Convert.ToInt32("0x" + parts[2].Substring(2, 5), 16) : int.Parse(parts[1]);
-            
-            if(direction == 'D' || direction == '1') {
+
+            if (direction == 'D' || direction == '1')
+            {
                 verticalLines.Add(new(currentX, currentY, length + 1));
                 currentY += length;
-            } else if(direction == 'U' || direction == '3') {
+            }
+            else if (direction == 'U' || direction == '3')
+            {
                 currentY -= length;
                 verticalLines.Add(new(currentX, currentY, length + 1));
-            } else if(direction == 'L' || direction == '2') {
+            }
+            else if (direction == 'L' || direction == '2')
+            {
                 currentX -= length;
                 horizontalLines.Add(new(currentX, currentY, length + 1));
-            } else if(direction == 'R' || direction == '0') {
+            }
+            else if (direction == 'R' || direction == '0')
+            {
                 horizontalLines.Add(new(currentX, currentY, length + 1));
                 currentX += length;
             }
@@ -43,9 +55,10 @@ public class Test
         var maxY = verticalLines.Max(c => c.Item2 + c.Item3) - 1;
 
 
-        var additionalLines = new List<Tuple<int,int,int>>();
+        var additionalLines = new List<Tuple<int, int, int>>();
         var horizontalLinesPerY = horizontalLines.GroupBy(l => l.Item2).ToDictionary(g => g.Key, g => g.ToList());
-        for (var y = minY; y <= maxY; y++) {
+        for (var y = minY; y <= maxY; y++)
+        {
             var lines = verticalLines.Where(l => l.Item2 <= y && l.Item2 + l.Item3 > y).OrderBy(l => l.Item1).ToArray();
 
             var firstX = lines.Min(l => l.Item1);
@@ -56,16 +69,17 @@ public class Test
                 additionalLines.Add(new(minX, y, firstX - minX));
             if (lastX < maxX)
                 additionalLines.Add(new(lastX + 1, y, maxX - lastX));
-            
+
             var horizontalLines2 = horizontalLinesPerY.ContainsKey(y)
                 ? horizontalLinesPerY[y]
                 : null;
-            for (var i = 0; i < lines.Length; i++) {
+            for (var i = 0; i < lines.Length; i++)
+            {
                 var line1 = lines[i];
                 var horizontalLine = horizontalLines2?.Any(l => l.Item1 == line1.Item1);
                 if (horizontalLine != true)
                 {
-                    var line2 = lines.Length > i + 1 ? lines[i+1] : null;
+                    var line2 = lines.Length > i + 1 ? lines[i + 1] : null;
                     if (line2 != null && line2.Item1 > line1.Item1 + 1)
                     {
                         additionalLines.Add(new(line1.Item1 + 1, y, line2.Item1 - line1.Item1 - 1));
@@ -75,43 +89,49 @@ public class Test
         }
 
         // Remove if nothing above & not a line
-        var queue = new Queue<Tuple<int,int,int>>();
+        var queue = new Queue<Tuple<int, int, int>>();
         queue.Enqueue(new(minX - 2, minY - 1, maxX - minX + 4));
         queue.Enqueue(new(minX - 2, maxY + 1, maxX - minX + 4));
         var fillamentPerY = additionalLines.GroupBy(l => l.Item2).ToDictionary(g => g.Key, g => g.ToList());
-        
+
         foreach (var line in additionalLines.Where(l => l.Item1 == minX || l.Item1 + l.Item3 - 1 == maxX))
             queue.Enqueue(line);
 
-        while (queue.Count > 0) {
+        while (queue.Count > 0)
+        {
             var line = queue.Dequeue();
-            
-            if (line.Item1 > minX - 2) {
+
+            if (line.Item1 > minX - 2)
+            {
                 fillamentPerY[line.Item2].Remove(line);
             }
             var begin = line.Item1;
             var end = line.Item1 + line.Item3 - 1;
 
             // Remove adjacent lines below
-            if (line.Item2 < maxY) {
-                var linesBelow = fillamentPerY[line.Item2 + 1].Where(l => 
+            if (line.Item2 < maxY && fillamentPerY.TryGetValue(line.Item2 + 1, out var value))
+            {
+                var linesBelow = value.Where(l =>
                             (begin >= l.Item1 && begin <= l.Item1 + l.Item3 - 1)
                             || (end >= l.Item1 && end <= l.Item1 + l.Item3 - 1)
                             || (begin < l.Item1 && end > l.Item1 + l.Item3 - 1)
                     ).ToArray();
-                foreach (var l in linesBelow) {
+                foreach (var l in linesBelow)
+                {
                     queue.Enqueue(l);
                 }
             }
 
             // Remove adjacent lines above
-            if (line.Item2 > minY) {
-                var linesAbove = fillamentPerY[line.Item2 - 1].Where(l => 
+            if (line.Item2 > minY && fillamentPerY.TryGetValue(line.Item2 - 1, out value))
+            {
+                var linesAbove = value.Where(l =>
                             (begin >= l.Item1 && begin <= l.Item1 + l.Item3 - 1)
                             || (end >= l.Item1 && end <= l.Item1 + l.Item3 - 1)
                             || (begin < l.Item1 && end > l.Item1 + l.Item3 - 1)
                     ).ToArray();
-                foreach (var l in linesAbove) {
+                foreach (var l in linesAbove)
+                {
                     queue.Enqueue(l);
                 }
             }

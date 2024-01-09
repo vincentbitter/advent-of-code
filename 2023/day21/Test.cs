@@ -16,7 +16,7 @@ public class Test
         var startX = 0;
         var startY = 0;
 
-        var rocks = new List<Tuple<int, int>>();
+        var rocks = new List<Location>();
         for (var y = 0; y <= maxY; y++)
         {
             for (var x = 0; x <= maxX; x++)
@@ -33,39 +33,47 @@ public class Test
                 }
             }
         }
-        var queue = new Queue<Tuple<int, int, int>>();
-        queue.Enqueue(new(startX, startY, 0));
-        var destinations = new List<Tuple<int, int>>();
-        var visitedUneven = new List<Tuple<int, int>>();
+        var queue = new HashSet<Tuple<Location, int>>
+        {
+            new(new(startX, startY), 0)
+        };
+        var destinations = new HashSet<Location>();
+        var visitedUneven = new HashSet<Location>();
         while (queue.Count > 0)
         {
-            var item = queue.Dequeue();
+            var newQueue = new HashSet<Tuple<Location, int>>();
+            foreach (var item in queue)
+            {
+                if (rocks.Contains(item.Item1))
+                    continue;
 
-            if (visitedUneven.Any(r => r.Item1 == item.Item1 && r.Item2 == item.Item2))
-                continue;
+                if (item.Item2 % 2 == 0)
+                    destinations.Add(item.Item1);
 
-            if (rocks.Any(r => r.Item1 == item.Item1 && r.Item2 == item.Item2))
-                continue;
+                if (!visitedUneven.Add(item.Item1))
+                    continue;
 
-            if (item.Item3 % 2 == 0)
-                destinations.Add(new(item.Item1, item.Item2));
-            else
-                visitedUneven.Add(new(item.Item1, item.Item2));
-            if (item.Item3 == steps)
-                continue;
+                if (item.Item2 == steps)
+                    continue;
 
-            if (item.Item1 > 0 && !destinations.Any(d => d.Item1 == item.Item1 - 1 && d.Item2 == item.Item2))
-                queue.Enqueue(new(item.Item1 - 1, item.Item2, item.Item3 + 1));
-            if (item.Item1 < maxX && !destinations.Any(d => d.Item1 == item.Item1 + 1 && d.Item2 == item.Item2))
-                queue.Enqueue(new(item.Item1 + 1, item.Item2, item.Item3 + 1));
-            if (item.Item2 > 0 && !destinations.Any(d => d.Item1 == item.Item1 && d.Item2 == item.Item2 - 1))
-                queue.Enqueue(new(item.Item1, item.Item2 - 1, item.Item3 + 1));
-            if (item.Item2 < maxY && !destinations.Any(d => d.Item1 == item.Item1 && d.Item2 == item.Item2 + 1))
-                queue.Enqueue(new(item.Item1, item.Item2 + 1, item.Item3 + 1));
+                var left = new Location(item.Item1.X - 1, item.Item1.Y);
+                var right = new Location(item.Item1.X + 1, item.Item1.Y);
+                var up = new Location(item.Item1.X, item.Item1.Y - 1);
+                var down = new Location(item.Item1.X, item.Item1.Y + 1);
+
+                if (item.Item1.X > 0 && !destinations.Contains(left))
+                    newQueue.Add(new(left, item.Item2 + 1));
+                if (item.Item1.X < maxX && !destinations.Contains(right))
+                    newQueue.Add(new(right, item.Item2 + 1));
+                if (item.Item1.Y > 0 && !destinations.Contains(up))
+                    newQueue.Add(new(up, item.Item2 + 1));
+                if (item.Item1.Y < maxY && !destinations.Contains(down))
+                    newQueue.Add(new(down, item.Item2 + 1));
+            }
+            queue = newQueue;
         }
 
-        var uniqueDestinations = destinations.Distinct().ToArray();
-        Assert.Equal(expectedResult, uniqueDestinations.Length);
+        Assert.Equal(expectedResult, destinations.Count);
     }
 
     [Theory]
@@ -79,7 +87,7 @@ public class Test
         var startX = 0;
         var startY = 0;
 
-        var rocks = new List<Tuple<int, int>>();
+        var rocks = new List<Location>();
         for (var y = 0; y <= maxY; y++)
         {
             for (var x = 0; x <= maxX; x++)
@@ -102,11 +110,11 @@ public class Test
 
         var oddSquares = (size + 1) * (size + 1);
         var oddSquareSize = result.OddPositions.Count();
-        var oddQuareCornerSize = result.OddPositions.Count(p => p.Item3 > 65);
+        var oddQuareCornerSize = result.OddPositions.Count(p => p.Item2 > 65);
 
         var evenSquares = size * size;
         var evenSquareSize = result.EvenPositions.Count();
-        var evenSquareCornerSize = result.EvenPositions.Count(p => p.Item3 > 65);
+        var evenSquareCornerSize = result.EvenPositions.Count(p => p.Item2 > 65);
 
         var total = oddSquares * oddSquareSize
             + evenSquares * evenSquareSize
@@ -117,39 +125,43 @@ public class Test
     }
 
     private record DestinationReport(
-        List<Tuple<int, int, int>> EvenPositions,
-        List<Tuple<int, int, int>> OddPositions
+        List<Tuple<Location, int>> EvenPositions,
+        List<Tuple<Location, int>> OddPositions
     );
 
     private DestinationReport GetDestinations(
-            Tuple<int, int> startingPosition, int maxX, int maxY, List<Tuple<int, int>> rocks)
+            Location startingPosition, int maxX, int maxY, List<Location> rocks)
     {
-        var queue = new List<Tuple<int, int, int>>();
-        queue.Add(new(startingPosition.Item1, startingPosition.Item2, 0));
+        var queue = new List<Tuple<Location, int>>
+        {
+            new(startingPosition, 0)
+        };
 
-        var visitedEven = new HashSet<Tuple<int, int, int>>();
-        var visitedUneven = new HashSet<Tuple<int, int, int>>();
-        var visitedEven2 = new HashSet<string>();
-        var visitedUneven2 = new HashSet<string>();
-        visitedEven2.Add(startingPosition.Item1 + " " + startingPosition.Item2);
+        var visitedEven = new HashSet<Tuple<Location, int>>();
+        var visitedUneven = new HashSet<Tuple<Location, int>>();
+        var visitedEven2 = new HashSet<Location>();
+        var visitedUneven2 = new HashSet<Location>();
+        visitedEven2.Add(startingPosition);
 
         while (queue.Count > 0)
         {
-            var filtered = queue.Where(item => !rocks.Any(r => r.Item1 == item.Item1 && r.Item2 == item.Item2)).ToList();
-            filtered = filtered.Where(item => item.Item3 % 2 == 0 ? visitedEven.Add(item) : visitedUneven.Add(item)).ToList();
+            var filtered = queue.Where(item => !rocks.Any(r => r.X == item.Item1.X && r.Y == item.Item1.Y)).ToList();
+            filtered = filtered.Where(item => item.Item2 % 2 == 0 ? visitedEven.Add(item) : visitedUneven.Add(item)).ToList();
 
-            var newQueue = new List<Tuple<int, int, int>>();
-            newQueue.AddRange(filtered.Where(item => item.Item1 > 0).Select(item => new Tuple<int, int, int>(item.Item1 - 1, item.Item2, item.Item3 + 1)));
-            newQueue.AddRange(filtered.Where(item => item.Item1 < maxX).Select(item => new Tuple<int, int, int>(item.Item1 + 1, item.Item2, item.Item3 + 1)));
-            newQueue.AddRange(filtered.Where(item => item.Item2 > 0).Select(item => new Tuple<int, int, int>(item.Item1, item.Item2 - 1, item.Item3 + 1)));
-            newQueue.AddRange(filtered.Where(item => item.Item2 < maxY).Select(item => new Tuple<int, int, int>(item.Item1, item.Item2 + 1, item.Item3 + 1)));
+            var newQueue = new List<Tuple<Location, int>>();
+            newQueue.AddRange(filtered.Where(item => item.Item1.X > 0).Select(item => new Tuple<Location, int>(new(item.Item1.X - 1, item.Item1.Y), item.Item2 + 1)));
+            newQueue.AddRange(filtered.Where(item => item.Item1.X < maxX).Select(item => new Tuple<Location, int>(new(item.Item1.X + 1, item.Item1.Y), item.Item2 + 1)));
+            newQueue.AddRange(filtered.Where(item => item.Item1.Y > 0).Select(item => new Tuple<Location, int>(new(item.Item1.X, item.Item1.Y - 1), item.Item2 + 1)));
+            newQueue.AddRange(filtered.Where(item => item.Item1.Y < maxY).Select(item => new Tuple<Location, int>(new(item.Item1.X, item.Item1.Y + 1), item.Item2 + 1)));
             queue = newQueue
-                .Where(item => item.Item3 % 2 == 0
-                    ? visitedEven2.Add(item.Item1 + " " + item.Item2)
-                    : visitedUneven2.Add(item.Item1 + " " + item.Item2))
+                .Where(item => item.Item2 % 2 == 0
+                    ? visitedEven2.Add(item.Item1)
+                    : visitedUneven2.Add(item.Item1))
                 .ToList();
         }
 
         return new(visitedEven.ToList(), visitedUneven.ToList());
     }
 }
+
+public record struct Location(int X, int Y);

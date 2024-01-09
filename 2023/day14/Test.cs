@@ -10,20 +10,28 @@ public class Test
     public void PartA(string fileName, int expectedResult)
     {
         var input = Parser.ReadAllLines(fileName);
-        var rocks = new List<Rock>();
-        for(var row = 0; row < input.Length; row++) {
-            var y = input.Length - row;
-            for (var x = 0; x < input[0].Length; x++) {
-                if (input[row][x] != '.') {
+        var total = 0;
+
+        for (var x = 0; x < input[0].Length; x++)
+        {
+            var maxY = input.Length;
+            for (var row = 0; row < input.Length; row++)
+            {
+                var y = input.Length - row;
+
+                if (input[row][x] != '.')
+                {
                     var rock = new Rock(input[row][x], x, y);
-                    rocks.Add(rock);
-                    rock.RollNorth(rocks, input.Length);
+                    if (rock.IsRound())
+                    {
+                        rock.Y = maxY;
+                        total += rock.Y;
+                    }
+                    maxY = rock.Y - 1;
                 }
             }
         }
 
-        var roundRocks = rocks.Where(r => r.IsRound()).ToList();
-        var total = roundRocks.Sum(r => r.Y);
         Assert.Equal(expectedResult, total);
     }
 
@@ -34,10 +42,13 @@ public class Test
     {
         var input = Parser.ReadAllLines(fileName);
         var rocks = new List<Rock>();
-        for(var row = 0; row < input.Length; row++) {
+        for (var row = 0; row < input.Length; row++)
+        {
             var y = input.Length - row;
-            for (var x = 0; x < input[0].Length; x++) {
-                if (input[row][x] != '.') {
+            for (var x = 0; x < input[0].Length; x++)
+            {
+                if (input[row][x] != '.')
+                {
                     var rock = new Rock(input[row][x], x, y);
                     rocks.Add(rock);
                 }
@@ -49,39 +60,72 @@ public class Test
         var history = new HashSet<long>();
         var roundRocks = rocks.Where(r => r.IsRound()).ToList();
         var skipped = false;
-        for (var spin = 1; spin <= 1_000_000_000; spin++) {
+        var orderedRocks = rocks
+            .GroupBy(r => r.X)
+            .OrderBy(r => r.Key)
+            .Select(g => g.OrderByDescending(r => r.Y).ToList())
+            .ToArray();
+
+        for (var spin = 1; spin <= 1_000_000_000; spin++)
+        {
             // North
-            for (var x = 0; x <= maxX; x++) {
-                var orderedRocks = roundRocks.Where(r => r.X == x).OrderByDescending(r => r.Y).ToArray();
-                foreach(var rock in orderedRocks)
-                    rock.RollNorth(rocks, maxY);
+            var orderedRocks2 = Enumerable.Range(0, maxY + 1).Select(i => new List<Rock>()).ToArray();
+            for (var x = 0; x <= maxX; x++)
+            {
+                var max = maxY;
+                foreach (var rock in orderedRocks[x])
+                {
+                    max = rock.RollToY(max) - 1;
+                    orderedRocks2[rock.Y].Add(rock);
+                }
             }
 
+            orderedRocks = orderedRocks2;
+            orderedRocks2 = Enumerable.Range(0, maxX + 1).Select(i => new List<Rock>()).ToArray();
             // West
-            for (var y = 0; y <= maxY; y++) {
-                var orderedRocks = roundRocks.Where(r => r.Y == y).OrderBy(r => r.X).ToArray();
-                foreach(var rock in orderedRocks)
-                    rock.RollWest(rocks);
+            for (var y = 0; y <= maxY; y++)
+            {
+                var min = 0;
+                foreach (var rock in orderedRocks[y])
+                {
+                    min = rock.RollToX(min) + 1;
+                    orderedRocks2[rock.X].Add(rock);
+                }
             }
 
+            orderedRocks = orderedRocks2;
+            orderedRocks2 = Enumerable.Range(0, maxY + 1).Select(i => new List<Rock>()).ToArray();
             // South
-            for (var x = 0; x <= maxX; x++) {
-                var orderedRocks = roundRocks.Where(r => r.X == x).OrderBy(r => r.Y).ToArray();
-                foreach(var rock in orderedRocks)
-                    rock.RollSouth(rocks);
+            for (var x = maxX; x >= 0; x--)
+            {
+                var min = 1;
+                foreach (var rock in orderedRocks[x])
+                {
+                    min = rock.RollToY(min) + 1;
+                    orderedRocks2[rock.Y].Add(rock);
+                }
             }
 
+            orderedRocks = orderedRocks2;
+            orderedRocks2 = Enumerable.Range(0, maxX + 1).Select(i => new List<Rock>()).ToArray();
             // East
-            for (var y = 0; y <= maxY; y++) {
-                var orderedRocks = roundRocks.Where(r => r.Y == y).OrderByDescending(r => r.X).ToArray();
-                foreach(var rock in orderedRocks)
-                    rock.RollEast(rocks, maxX);
+            for (var y = maxY; y >= 0; y--)
+            {
+                var max = maxX;
+                foreach (var rock in orderedRocks[y])
+                {
+                    max = rock.RollToX(max) - 1;
+                    orderedRocks2[rock.X].Add(rock);
+                }
             }
-            
-            if (!skipped) {
+            orderedRocks = orderedRocks2;
+
+            if (!skipped)
+            {
                 var totalX = roundRocks.Sum(r => (long)r.GetHashCode());
                 var total = roundRocks.Sum(r => r.Y);
-                if (!history.Add(totalX)) {
+                if (!history.Add(totalX))
+                {
                     skipped = true;
                     var previous = history.ToList().IndexOf(totalX) + 1;
                     var size = previous - spin;
@@ -96,12 +140,14 @@ public class Test
     }
 }
 
-public record Rock {
+public record Rock
+{
     private bool _round = false;
-    public int X {get; private set;}
-    public int Y {get; private set;}
+    public int X { get; set; }
+    public int Y { get; set; }
 
-    public Rock(char type, int x, int y) {
+    public Rock(char type, int x, int y)
+    {
         X = x;
         Y = y;
         _round = type == 'O';
@@ -109,51 +155,17 @@ public record Rock {
 
     public bool IsRound() => _round;
 
-    public void RollNorth(List<Rock> rocks, int maxY)
+    public int RollToY(int y)
     {
-        if (!IsRound())
-            return;
-        
-        var rocksAbove = rocks.Where(r => r.Y > Y && r.X == X).ToArray();
-        if (rocksAbove.Any())
-            Y = rocksAbove.Min(r => r.Y) - 1;
-        else
-            Y = maxY;
+        if (IsRound())
+            Y = y;
+        return Y;
     }
 
-    public void RollWest(List<Rock> rocks)
+    public int RollToX(int x)
     {
-        if (!IsRound())
-            return;
-        
-        var rocksAbove = rocks.Where(r => r.Y == Y && r.X < X).ToArray();
-        if (rocksAbove.Any())
-            X = rocksAbove.Max(r => r.X) + 1;
-        else
-            X = 0;
-    }
-
-    public void RollSouth(List<Rock> rocks)
-    {
-        if (!IsRound())
-            return;
-        
-        var rocksAbove = rocks.Where(r => r.Y < Y && r.X == X).ToArray();
-        if (rocksAbove.Any())
-            Y = rocksAbove.Max(r => r.Y) + 1;
-        else
-            Y = 1;
-    }
-
-    public void RollEast(List<Rock> rocks, int maxX)
-    {
-        if (!IsRound())
-            return;
-        
-        var rocksAbove = rocks.Where(r => r.Y == Y && r.X > X).ToArray();
-        if (rocksAbove.Any())
-            X = rocksAbove.Min(r => r.X) - 1;
-        else
-            X = maxX;
+        if (IsRound())
+            X = x;
+        return X;
     }
 }

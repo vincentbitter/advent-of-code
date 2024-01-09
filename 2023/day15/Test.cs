@@ -1,4 +1,5 @@
 using Lib;
+using Lib.Extensions;
 
 namespace day15;
 
@@ -18,13 +19,7 @@ public class Test
 
     private int Hash(string arg)
     {
-        var value = 0;
-        foreach(var c in arg) {
-            value += c;
-            value *= 17;
-            value %= 256;
-        }
-        return value;
+        return arg.Aggregate((byte)0, (t, c) => t = (byte)((t + c) * 17));
     }
 
     [Theory]
@@ -35,36 +30,43 @@ public class Test
         var input = Parser.ReadAllText(fileName);
         var instructions = input.Split(',').ToArray();
         var boxes = Enumerable.Range(0, 256).Select(i => new List<string>()).ToArray();
-        foreach (var instruction in instructions) {
+        foreach (var instruction in instructions)
+        {
             // -
-            if (instruction.EndsWith('-')) {
+            if (instruction[^1] == '-')
+            {
                 var group = instruction[..^1];
                 var label = Hash(group);
                 var box = boxes[label];
-                boxes[label] = box.Where(v => !v.StartsWith(group + "=")).ToList();
+                boxes[label] = box.Where(v => v[..^2] != group).ToList();
             }
 
             // =
-            else {
+            else
+            {
                 var group = instruction[..^2];
                 var label = Hash(group);
                 var box = boxes[label];
 
-                var existing = box.SingleOrDefault(v => v.StartsWith(group + "="));
-                if (existing != null) {
+                var existing = box.FirstOrDefault(v => v[..^2] == group);
+                if (existing != null)
+                {
                     var i = box.IndexOf(existing);
                     box.Remove(existing);
                     box.Insert(i, instruction);
-                } else
+                }
+                else
                     box.Add(instruction);
             }
         }
 
         var total = 0;
-        for(var i = 0; i < boxes.Length; i++) {
+        for (var i = 0; i < boxes.Length; i++)
+        {
             var box = boxes[i];
-            for(var j = 0; j < box.Count; j++) {
-                var value = int.Parse(box[j].Substring(box[j].Length - 1));
+            for (var j = 0; j < box.Count; j++)
+            {
+                var value = box[j][^1].ToInt();
                 var subTotal = (i + 1) * (j + 1) * value;
                 total += subTotal;
             }

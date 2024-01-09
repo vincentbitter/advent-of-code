@@ -7,4 +7,11 @@ public static class CharExtensions
         value = character - 48;
         return char.IsDigit(character);
     }
+
+    public static int ToInt(this char character)
+    {
+        if (!char.IsDigit(character))
+            throw new InvalidCastException("Not a digit");
+        return character - 48;
+    }
 }

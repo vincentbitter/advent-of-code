@@ -30,4 +30,22 @@ public record struct LongRange(long From, long To)
     {
         return new LongRange(From + offset, To + offset);
     }
+
+    public readonly IEnumerable<LongRange> Split(int value)
+    {
+        return new List<LongRange> {
+            new (From, value - 1),
+            new (value, To)
+        };
+    }
+
+    public readonly long Size()
+    {
+        return To - From + 1;
+    }
+
+    public readonly double Avg()
+    {
+        return (To + From) / 2.0;
+    }
 }

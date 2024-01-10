@@ -1,4 +1,5 @@
 using Lib;
+using Lib.Misc;
 
 namespace day21;
 
@@ -33,45 +34,41 @@ public class Test
                 }
             }
         }
-        var queue = new HashSet<Tuple<Location, int>>
-        {
-            new(new(startX, startY), 0)
-        };
         var destinations = new HashSet<Location>();
         var visitedUneven = new HashSet<Location>();
-        while (queue.Count > 0)
+        QueueLoop.Run(new HashSet<Tuple<Location, int>>
         {
+            new(new(startX, startY), 0)
+        }, (item) =>
+        {
+            if (rocks.Contains(item.Item1))
+                return null;
+
+            if (item.Item2 % 2 == 0)
+                destinations.Add(item.Item1);
+
+            if (!visitedUneven.Add(item.Item1))
+                return null;
+
+            if (item.Item2 == steps)
+                return null;
+
+            var left = new Location(item.Item1.X - 1, item.Item1.Y);
+            var right = new Location(item.Item1.X + 1, item.Item1.Y);
+            var up = new Location(item.Item1.X, item.Item1.Y - 1);
+            var down = new Location(item.Item1.X, item.Item1.Y + 1);
+
             var newQueue = new HashSet<Tuple<Location, int>>();
-            foreach (var item in queue)
-            {
-                if (rocks.Contains(item.Item1))
-                    continue;
-
-                if (item.Item2 % 2 == 0)
-                    destinations.Add(item.Item1);
-
-                if (!visitedUneven.Add(item.Item1))
-                    continue;
-
-                if (item.Item2 == steps)
-                    continue;
-
-                var left = new Location(item.Item1.X - 1, item.Item1.Y);
-                var right = new Location(item.Item1.X + 1, item.Item1.Y);
-                var up = new Location(item.Item1.X, item.Item1.Y - 1);
-                var down = new Location(item.Item1.X, item.Item1.Y + 1);
-
-                if (item.Item1.X > 0 && !destinations.Contains(left))
-                    newQueue.Add(new(left, item.Item2 + 1));
-                if (item.Item1.X < maxX && !destinations.Contains(right))
-                    newQueue.Add(new(right, item.Item2 + 1));
-                if (item.Item1.Y > 0 && !destinations.Contains(up))
-                    newQueue.Add(new(up, item.Item2 + 1));
-                if (item.Item1.Y < maxY && !destinations.Contains(down))
-                    newQueue.Add(new(down, item.Item2 + 1));
-            }
-            queue = newQueue;
-        }
+            if (item.Item1.X > 0 && !destinations.Contains(left))
+                newQueue.Add(new(left, item.Item2 + 1));
+            if (item.Item1.X < maxX && !destinations.Contains(right))
+                newQueue.Add(new(right, item.Item2 + 1));
+            if (item.Item1.Y > 0 && !destinations.Contains(up))
+                newQueue.Add(new(up, item.Item2 + 1));
+            if (item.Item1.Y < maxY && !destinations.Contains(down))
+                newQueue.Add(new(down, item.Item2 + 1));
+            return newQueue;
+        });
 
         Assert.Equal(expectedResult, destinations.Count);
     }

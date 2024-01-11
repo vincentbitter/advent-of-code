@@ -5,7 +5,7 @@ public static class CharMapFloodFill
     public static int FloodFillSize(this CharMap map, Point2D start,
         IEnumerable<char> include, IEnumerable<char>? count = null)
     {
-        count = count ?? include;
+        count ??= include;
 
         var visited = new HashSet<Point2D>();
         var next = new List<Point2D> { start };

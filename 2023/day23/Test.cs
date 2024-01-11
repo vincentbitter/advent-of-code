@@ -39,35 +39,40 @@ public class Test
         routes = routes.GroupBy(r => new { r.From, r.To }).Select(g => g.OrderByDescending(r => r.Weight).First()).ToArray();
         var options = routes.GroupBy(o => o.From).ToDictionary(g => g.Key, g => g.ToList());
         var routeFromStart = routes.Single(r => r.From == start);
-        var routesToFinish = routes.Where(r => r.To == finish).ToDictionary(r => r.From, r => r.Weight);
+        var routesToFinish = routes.Where(r => r.To == finish).ToArray();
+        var weightToFinish = 0;
+        if (routesToFinish.Length == 1)
+        {
+            finish = routesToFinish[0].From;
+            weightToFinish = routesToFinish[0].Weight;
+        }
 
         var max = 0;
-        foreach (var routeToFinish in routesToFinish)
+        var queue = new Queue<Tuple<int[], Position, int>>();
+        queue.Enqueue(new(new int[] { routeFromStart.To.Id, routeFromStart.From.Id }, routeFromStart.To, routeFromStart.Weight));
+
+        while (queue.Count > 0)
         {
-            var queue = new Queue<Tuple<Position[], int>>();
-            queue.Enqueue(new(new Position[] { routeFromStart.To, routeFromStart.From }, routeFromStart.Weight));
-            var validRoutes = new List<int>();
-            while (queue.Count > 0)
+            var route = queue.Dequeue();
+            var last = route.Item2;
+            if (finish == last)
             {
-                var route = queue.Dequeue();
-                var last = route.Item1[0];
-                if (routeToFinish.Key == last)
-                    validRoutes.Add(route.Item2 + routeToFinish.Value);
-                else if (last != finish)
+                if (max < route.Item3)
+                    max = route.Item3;
+            }
+            else if (last != finish)
+            {
+                foreach (var option in options[last])
                 {
-                    foreach (var option in options[last])
+                    if (!route.Item1.Contains(option.To.Id))
                     {
-                        if (!route.Item1.Contains(option.To))
-                        {
-                            var newSet = route.Item1.Prepend(option.To).ToArray();
-                            queue.Enqueue(new(newSet, route.Item2 + option.Weight));
-                        }
+                        var newSet = route.Item1.Prepend(option.To.Id).ToArray();
+                        queue.Enqueue(new(newSet, option.To, route.Item3 + option.Weight));
                     }
                 }
             }
-            max = Math.Max(max, validRoutes.Max());
         }
-        return max;
+        return max + weightToFinish;
     }
 
     private IEnumerable<Route> GetRoutes(string[] map, Position position, bool slipperySlopes)
@@ -121,7 +126,7 @@ public class Test
                         routes[i] = new(route.Item1, route.Item2, route.Item3, true);
                     }
                     // Only one way to go, so continue
-                    if (options.Length == 1)
+                    else if (options.Length == 1)
                     {
                         routes[i] = new(route.Item2, options[0], route.Item3 + 1, false);
                     }
@@ -183,5 +188,9 @@ public class Test
     }
 }
 
-public record struct Position(int X, int Y);
+public record struct Position(int X, int Y)
+{
+    public readonly int Id => X * 100 + Y;
+}
+
 public record struct Route(Position From, Position To, int Weight);

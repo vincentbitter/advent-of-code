@@ -1,0 +1,4 @@
+{
+  "dotnetAcquisitionExtension.enableTelemetry": false,
+  "jupyter.notebookFileRoot": "${workspaceFolder}"
+}
